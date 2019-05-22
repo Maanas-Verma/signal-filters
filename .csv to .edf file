@@ -1,0 +1,115 @@
+#imports libraries
+import numpy as np
+import matplotlib.pyplot as plt 
+import pandas as pd
+import scipy.signal as sps
+import scipy.fftpack as spf
+
+
+#import database
+data = pd.read_csv('sample.csv', delimiter =',')
+
+
+#data preprocessing of database
+x=[]
+i=1
+while(i<=21):
+    x.append(data.iloc[1:,i].values) 
+    i= i+1
+x_new = np.ravel(x)#making 21X30000 to 1X630000
+for j in range(1911000):#converting each element of our data file into float
+     if x_new[j] == '-' or x_new[j] =='+':
+         x_new[j] = 0
+     else:
+         x_new[j]= float(x_new[j])
+
+
+#preprocessing for putting a fir filter 
+sample_rate = 500
+#numtaps , beta = sps.kaiserord(60, 0.05)
+
+hn = sps.firwin(numtaps = 257, cutoff = 20, window = ('kaiser', 8.856 ), fs = sample_rate)
+#hn = sps.firwin(numtaps = 1211 , cutoff = 20, fs = sample_rate)
+fft_hn = spf.fft(hn)
+
+#ploting a graph of fft filter
+plt.figure('hn')
+plt.plot(np.absolute(fft_hn))
+
+
+#Appling fir filter
+yn = sps.lfilter(b=hn , a=1 , x=x_new)#yn is output signal
+
+
+#ploting input frequency curve
+fft_input = spf.fft(x_new)
+plt.figure('input and output frequecy')
+plt.plot(np.absolute(fft_input))
+
+#ploting output frequency curve
+fft_output = spf.fft(yn)#extracting output frequency from yn
+plt.plot(np.absolute(fft_output))
+
+#ploting outputsignal curve
+t= np.arange(1911000)/sample_rate
+#delay=((0.5*())/sample_rate)
+plt.figure('output with input signal')
+plt.plot(t,x_new)
+plt.plot(t,yn)
+
+
+fr=[]
+for i in range(91000):
+    gr=[]
+    for j in range(21):
+        gr.append(yn[i+j*91000])
+    fr.append(gr)
+    
+fr = np.transpose(fr)
+fr=fr*0.00003
+
+
+my = pd.read_csv('nitin_1.csv', delimiter =',')
+########################################################
+    
+import mne 
+import numpy as np
+import matplotlib.pyplot as plt 
+
+
+# Some information about the channels
+ch_names = ['EEG Fp1','EEG Fp2','EEG F3','EEG F4','EEG F7',
+            'EEG F8','EEG T3','EEG T4','EEG C3','EEG C4','EEG T5','EEG T6',
+            'EEG P3','EEG P4','EEG O1','EEG O2','EEG Fz',
+            'EEG Cz','EEG Pz','EEG A2-A1','ECG ECG']  # TODO: finish this list
+
+# Sampling rate of the Nautilus machine
+sfreq = 500  # Hz
+
+# Create the info structure needed by MNE
+info = mne.create_info(ch_names, sfreq)
+
+# Finally, create the Raw object
+raw = mne.io.RawArray(fr, info)
+
+# Plot it!
+raw.plot(duration=2.0, start=0.0, n_channels=1,
+            remove_dc=False,  title='EEG During Mental Arithmetic Task')
+
+
+########################################################
+
+
+
+mydata= mne.io.read_raw_edf('eeg1.edf',preload= True)
+a =mydata.copy()
+
+
+mydata.info
+
+
+
+mydata.plot(duration=2.0, start=0.0, n_channels=1,
+            remove_dc=True,  title='EEG During Mental Arithmetic Task')
+            
+            
