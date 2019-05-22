@@ -1,0 +1,76 @@
+#imports libraries
+import numpy as np
+import matplotlib.pyplot as plt 
+import pandas as pd
+import scipy.signal as sps
+import scipy.fftpack as spf
+
+
+#import database
+data = pd.read_csv('samples.csv', delimiter =',')
+
+
+#data preprocessing of database
+x=[]
+i=1
+while(i<=21): #number of channels we have to take
+    x.append(data.iloc[1:,i].values) 
+    i= i+1
+x_new = np.ravel(x)  # given array is 21X30000, so making 21X30000 to 1X630000 array
+for j in range(630000): #converting each element of our data file into float
+     if x_new[j] == '-' or x_new[j] =='+':  #It prevent any error in code due to csv file
+         x_new[j] = 0
+     else:
+         x_new[j]= float(x_new[j])
+
+
+#preprocessing for putting a fir filter 
+sample_rate = 500  #frequency of sample input 
+numtaps , beta = sps.kaiserord(60, 0.05)
+
+hn = sps.firwin(numtaps =513, cutoff = 20, window = ('kaiser',8.856 ), fs = sample_rate)
+#hn = sps.firwin(numtaps = 47 , cutoff = 20, fs = sample_rate)
+fft_hn = spf.fft(hn)
+
+#ploting a graph of fft filter
+plt.figure('hn')
+plt.plot(np.absolute(fft_hn))
+
+
+#Appling fir filter
+yn = sps.lfilter(b=hn , a=1 , x=x_new)#yn is output signal
+
+
+#ploting input frequency curve
+fft_input = spf.fft(x_new)
+plt.figure('input and output frequecy')
+plt.plot(np.absolute(fft_input))
+
+#ploting output frequency curve
+fft_output = spf.fft(yn)#extracting output frequency from yn
+plt.plot(np.absolute(fft_output))
+
+#ploting outputsignal curve
+t= np.arange(630000)/sample_rate
+delay=((0.15*(numtaps-1))/sample_rate)
+plt.figure('output with input signal')
+plt.plot(t,x_new)
+plt.plot(t-delay,yn)
+
+
+#preperation for making our own file
+fk=data.iloc[1:,0].values
+lk=data.iloc[1:,22].values
+
+d=open('samples.csv','r')
+file = open('juiytr.csv','w')
+file.write(d.readline()) 
+file.write(d.readline())
+for i in range(30000):
+    gr=[fk[i]]
+    for j in range(21):
+        gr.append(yn[i+j*30000])
+    gr.append(lk[i])
+    file.write('{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22}\n'.format(*gr))
+
+
